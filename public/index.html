@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Kato — Board Dashboard</title>
+<link rel="stylesheet" href="styles.css" />
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
+</head>
+<body>
+<header class="topbar">
+  <div class="brand">
+    <h1>Kato — Sales & Marketing</h1>
+    <p class="subtitle">Board Performance Overview</p>
+  </div>
+  <div class="meta">
+    <span id="generatedAt">Loading…</span>
+    <button id="refreshBtn" title="Re-read data.json">↻ Refresh</button>
+    <button id="exportBtn" class="primary">⬇ Export Excel</button>
+  </div>
+</header>
+
+<section class="filterbar">
+  <div class="fgroup">
+    <label>Team</label>
+    <div class="teamPicker">
+      <button data-team="all" class="active">All</button>
+      <button data-team="sales">Sales</button>
+      <button data-team="cs">CS</button>
+    </div>
+  </div>
+  <div class="fgroup">
+    <label>Rep</label>
+    <div id="ownerPicker" class="multiselect" data-placeholder="All"></div>
+  </div>
+  <div class="fgroup">
+    <label>Date range</label>
+    <div class="daterange">
+      <button data-range="wtd">WTD</button>
+      <button data-range="mtd">MTD</button>
+      <button data-range="qtd" class="active">QTD</button>
+      <button data-range="ytd">YTD</button>
+      <button data-range="12m">12m</button>
+      <button data-range="all">All</button>
+      <input type="date" id="dateFrom" />
+      <span>→</span>
+      <input type="date" id="dateTo" />
+    </div>
+  </div>
+  <div class="fgroup">
+    <label>Deal type</label>
+    <div id="typePicker" class="multiselect" data-placeholder="All types"></div>
+  </div>
+  <div class="fgroup">
+    <label>Pipeline</label>
+    <div id="pipelinePicker" class="multiselect" data-placeholder="All pipelines"></div>
+  </div>
+  <div class="fgroup targets">
+    <label>Targets (£)</label>
+    <div class="tinputs">
+      <span>New Biz <input id="tNewBiz"  type="number" value="500000" /></span>
+      <span>Growth  <input id="tGrowth" type="number" value="100000" /></span>
+      <span>Pipe   <input id="tPipe"   type="number" value="1500000" /></span>
+      <span>Cov×   <input id="tCov"    type="number" value="2" step="0.1" /></span>
+    </div>
+  </div>
+</section>
+
+<nav class="tabs">
+  <button data-tab="sales" class="active">Sales</button>
+  <button data-tab="marketing">Marketing</button>
+  <button data-tab="success">Customer Success</button>
+</nav>
+
+<main>
+  <!-- SALES TAB -->
+  <section id="sales-panel" class="tab-panel" data-panel="sales">
+    <section class="kpi-grid">
+      <div class="kpi"><span class="k-label">Total ARR <em>= Active MRR × 12</em></span><span class="k-value" id="kpi-arr">—</span><span class="k-sub" id="kpi-arr-sub"></span></div>
+      <div class="kpi"><span class="k-label">Gross New ARR</span><span class="k-value" id="kpi-gross">—</span><span class="k-sub" id="kpi-gross-sub"></span></div>
+      <div class="kpi"><span class="k-label">Expansion ARR</span><span class="k-value" id="kpi-exp">—</span><span class="k-sub" id="kpi-exp-sub"></span></div>
+      <div class="kpi"><span class="k-label">Open Pipeline (SQO+)</span><span class="k-value" id="kpi-pipe">—</span><span class="k-sub" id="kpi-pipe-sub"></span></div>
+      <div class="kpi"><span class="k-label">Pipe Coverage (Actual / Target)</span><span class="k-value" id="kpi-cov">—</span><span class="k-sub" id="kpi-cov-sub"></span></div>
+      <div class="kpi"><span class="k-label">AOV New Logo (Rolling 12m)</span><span class="k-value" id="kpi-aov">—</span><span class="k-sub" id="kpi-aov-sub"></span></div>
+    </section>
+
+    <section class="row">
+      <div class="card wide">
+        <h2>New ARR by month vs target</h2>
+        <canvas id="chart-arr"></canvas>
+      </div>
+    </section>
+
+    <section class="row">
+      <div class="card">
+        <h2>Open pipeline by stage (SQO+)</h2>
+        <canvas id="chart-stage"></canvas>
+      </div>
+      <div class="card">
+        <h2>New ARR by deal type</h2>
+        <canvas id="chart-type"></canvas>
+      </div>
+    </section>
+
+    <section class="row">
+      <div class="card wide">
+        <h2>Sales rep performance</h2>
+        <table id="table-owners">
+          <thead><tr><th>Rep</th><th class="num">New ARR</th><th class="num">Open Pipe</th><th class="num">Closing Qtr</th><th class="num">Deals Won</th><th class="num">Open Deals</th><th class="num">Win %</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="row">
+      <div class="card">
+        <h2>AE Pro Conversion Rate</h2>
+        <table id="table-pro-conv">
+          <thead><tr><th>Rep</th><th class="num">Wins</th><th class="num">Opens</th><th class="num">Rate</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+      <div class="card">
+        <h2>AE Atlas Conversion Rate</h2>
+        <table id="table-atlas-conv">
+          <thead><tr><th>Rep</th><th class="num">Wins</th><th class="num">Opens</th><th class="num">Rate</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="row">
+      <div class="card wide">
+        <h2>Activity leaderboard</h2>
+        <table id="table-activities">
+          <thead><tr><th>Rep</th><th class="num">Meetings</th><th class="num">Calls</th><th class="num">Emails</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="row">
+      <div class="card wide">
+        <h2>Top 20 open deals (by Total CARR)</h2>
+        <table id="table-topdeals">
+          <thead><tr><th>Deal</th><th>Rep</th><th>Type</th><th>Stage</th><th class="num">cARR</th><th class="num">Uplift</th><th>Close</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </section>
+  </section>
+
+  <!-- MARKETING TAB -->
+  <section id="marketing-panel" class="tab-panel" data-panel="marketing" style="display:none;">
+    <section class="kpi-grid">
+      <div class="kpi"><span class="k-label">MQL Inbounds (WTD)</span><span class="k-value" id="kpi-mql">—</span><span class="k-sub" id="kpi-mql-sub"></span></div>
+      <div class="kpi"><span class="k-label">Pipeline $ Created</span><span class="k-value" id="kpi-pipe-created">—</span><span class="k-sub" id="kpi-pipe-created-sub"></span></div>
+    </section>
+    <p style="padding: 20px; color: #9aa6c0;">Marketing metrics are under development. Check back soon.</p>
+  </section>
+
+  <!-- SUCCESS TAB -->
+  <section id="success-panel" class="tab-panel" data-panel="success" style="display:none;">
+    <p style="padding: 20px; color: #9aa6c0;">Customer success metrics are under development. Check back soon.</p>
+  </section>
+</main>
+
+<footer>
+  <p>Source: HubSpot · Refreshed by GitHub Action · <span id="dealCount"></span></p>
+  <p class="note" id="assumptions"></p>
+</footer>
+
+<script src="app.js"></script>
+</body>
+</html>

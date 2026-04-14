@@ -1,0 +1,10 @@
+{
+  "name": "kato-board-dashboard",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "fetch": "node scripts/fetch.mjs",
+    "serve": "npx --yes http-server public -p 8080 -c-1"
+  }
+}
